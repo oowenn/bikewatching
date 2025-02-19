@@ -54,21 +54,22 @@ map.on('load', () => {
         
         // Append circles to the SVG for each station
         circles = svg.selectAll('circle')
-          .data(stations)
-          .enter()
-          .append('circle')
-          .attr('r', 5)               // Radius of the circle
-          .attr('fill', 'steelblue')  // Circle fill color
-          .attr('stroke', 'white')    // Circle border color
-          .attr('stroke-width', 1)    // Circle border thickness
-          .attr('opacity', 0.8);      // Circle opacity
-          
-          // Initial position update when map loads
-          updatePositions();
+        .data(stations)
+        .enter()
+        .append('circle')
+        .attr('r', 5)               // Radius of the circle
+        .attr('fill', 'steelblue')  // Circle fill color
+        .attr('stroke', 'white')    // Circle border color
+        .attr('stroke-width', 1)    // Circle border thickness
+        .attr('opacity', 0.8)      // Circle opacity
+        ;
+        
+        // Initial position update when map loads
+        updatePositions();
     }).catch(error => {
         console.error('Error loading JSON:', error);  // Handle errors if JSON loading fails
     });
-
+    
 });
 
 
@@ -83,8 +84,8 @@ function getCoords(station) {
 // Function to update circle positions when the map moves/zooms
 function updatePositions() {
     circles
-        .attr('cx', d => getCoords(d).cx)  // Set the x-position using projected coordinates
-        .attr('cy', d => getCoords(d).cy); // Set the y-position using projected coordinates
+    .attr('cx', d => getCoords(d).cx)  // Set the x-position using projected coordinates
+    .attr('cy', d => getCoords(d).cy); // Set the y-position using projected coordinates
 }
 
 // Reposition markers on map interactions
@@ -93,3 +94,47 @@ map.on('zoom', updatePositions);     // Update during zooming
 map.on('resize', updatePositions);   // Update on window resize
 map.on('moveend', updatePositions);  // Final adjustment after movement ends
 
+
+let trips;
+
+map.on('load', () => {
+    d3.csv("https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv").then(data => {
+        trips = data;
+        console.log("Traffic data loaded", trips);
+        
+        departures = d3.rollup(
+            trips,
+            (v) => v.length,
+            (d) => d.start_station_id,
+            );
+            
+            let arrivals = d3.rollup(
+                trips,
+                (v) => v.length, // count the number of trips
+                (d) => d.end_station_id // group by end station ID
+                );
+                
+                stations = stations.map((station) => {
+                    let id = station.short_name;
+                    station.arrivals = arrivals.get(id) ?? 0;
+                    station.departures = departures.get(id) ?? 0;
+                    station.totalTraffic = station.arrivals + station.departures;
+                    return station;
+                });
+                
+                const radiusScale = d3
+                    .scaleSqrt()
+                    .domain([0, d3.max(stations, (d) => d.totalTraffic)])
+                    .range([0, 25]);
+                
+                circles
+                    .data(stations)
+                    .attr('r', (d) => radiusScale(d.totalTraffic));
+
+                
+            }).catch(error => {
+                console.error("Error loading the traffic data:", error);
+            });
+            
+        });
+        
