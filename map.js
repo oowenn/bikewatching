@@ -17,9 +17,10 @@ let line_styles = {
     'line-opacity': 0.6       // Slightly less transparent
 };
 
-let stations = [];
+let stations;
 const svg = d3.select('#map').select('svg');
 let circles;
+let trips;
 
 map.on('load', () => { 
     map.addSource('boston_route', {
@@ -43,9 +44,7 @@ map.on('load', () => {
         source: 'cambridge_route',
         paint: line_styles
     });
-});
-
-map.on('load', () => {
+    
     // Load the nested JSON file
     const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json'
     d3.json(jsonurl).then(jsonData => {
@@ -69,7 +68,50 @@ map.on('load', () => {
     }).catch(error => {
         console.error('Error loading JSON:', error);  // Handle errors if JSON loading fails
     });
-    
+
+    d3.csv("https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv").then(data => {
+        trips = data;
+        console.log("Traffic data loaded", trips);
+        
+        departures = d3.rollup(
+            trips,
+            (v) => v.length,
+            (d) => d.start_station_id,
+        );
+            
+        let arrivals = d3.rollup(
+            trips,
+            (v) => v.length, // count the number of trips
+            (d) => d.end_station_id // group by end station ID
+        );
+                
+        stations = stations.map((station) => {
+            let id = station.short_name;
+            station.arrivals = arrivals.get(id) ?? 0;
+            station.departures = departures.get(id) ?? 0;
+            station.totalTraffic = station.arrivals + station.departures;
+            return station;
+        });
+                
+        const radiusScale = d3
+            .scaleSqrt()
+            .domain([0, d3.max(stations, (d) => d.totalTraffic)])
+            .range([0, 25]);
+                
+        circles
+            .data(stations)
+            .attr('r', (d) => radiusScale(d.totalTraffic));
+
+        circles
+            .each(function(d) {
+                d3.select(this)
+                .append('title')
+                .text(`${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
+            });
+                
+    }).catch(error => {
+        console.error("Error loading the traffic data:", error);
+    });            
 });
 
 
@@ -95,46 +137,3 @@ map.on('resize', updatePositions);   // Update on window resize
 map.on('moveend', updatePositions);  // Final adjustment after movement ends
 
 
-let trips;
-
-map.on('load', () => {
-    d3.csv("https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv").then(data => {
-        trips = data;
-        console.log("Traffic data loaded", trips);
-        
-        departures = d3.rollup(
-            trips,
-            (v) => v.length,
-            (d) => d.start_station_id,
-            );
-            
-            let arrivals = d3.rollup(
-                trips,
-                (v) => v.length, // count the number of trips
-                (d) => d.end_station_id // group by end station ID
-                );
-                
-                stations = stations.map((station) => {
-                    let id = station.short_name;
-                    station.arrivals = arrivals.get(id) ?? 0;
-                    station.departures = departures.get(id) ?? 0;
-                    station.totalTraffic = station.arrivals + station.departures;
-                    return station;
-                });
-                
-                const radiusScale = d3
-                    .scaleSqrt()
-                    .domain([0, d3.max(stations, (d) => d.totalTraffic)])
-                    .range([0, 25]);
-                
-                circles
-                    .data(stations)
-                    .attr('r', (d) => radiusScale(d.totalTraffic));
-
-                
-            }).catch(error => {
-                console.error("Error loading the traffic data:", error);
-            });
-            
-        });
-        
