@@ -40,3 +40,29 @@ svg circle {
     fill: steelblue;
     pointer-events: auto;
 }
+
+
+header {
+    display: flex;
+    gap: 1em;
+    align-items: baseline;
+    justify-content: space-between;
+    width: 100%;
+}
+
+
+label {
+    margin-left: auto;
+}
+
+time, em {
+    display: block;
+    text-align: right;
+}
+
+em {
+    color: #666;
+    font-style: italic;
+} 
+
+
