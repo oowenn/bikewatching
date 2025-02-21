@@ -34,10 +34,17 @@ html, body {
     pointer-events: none;
 }
 
-svg circle {
+#map circle {
+    --color-departures: steelblue;
+    --color-arrivals: darkorange;
+    --color: color-mix(
+      in oklch,
+      var(--color-departures) calc(100% * var(--departure-ratio)),
+      var(--color-arrivals)
+    );
+    fill: var(--color);
     fill-opacity: 60%;
     stroke: white;
-    fill: steelblue;
     pointer-events: auto;
 }
 

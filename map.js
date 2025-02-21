@@ -25,6 +25,7 @@ let filteredTrips = [];
 let filteredArrivals = new Map();
 let filteredDepartures = new Map();
 let filteredStations = [];
+let stationFlow = d3.scaleQuantize().domain([0, 1]).range([0, 0.5, 1]);
 
 map.on('load', () => { 
     map.addSource('boston_route', {
@@ -52,7 +53,6 @@ map.on('load', () => {
     // Load the nested JSON file
     const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json'
     d3.json(jsonurl).then(jsonData => {
-        console.log('Loaded JSON Data:', jsonData);  // Log to verify structure
         stations = jsonData.data.stations;
         
         // Append circles to the SVG for each station
@@ -75,48 +75,12 @@ map.on('load', () => {
 
     d3.csv("https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv").then(data => {
         trips = data;
-        console.log("Traffic data loaded", trips);
         
-        departures = d3.rollup(
-            trips,
-            (v) => v.length,
-            (d) => d.start_station_id,
-        );
-            
-        let arrivals = d3.rollup(
-            trips,
-            (v) => v.length, // count the number of trips
-            (d) => d.end_station_id // group by end station ID
-        );
-                
-        stations = stations.map((station) => {
-            let id = station.short_name;
-            station.arrivals = arrivals.get(id) ?? 0;
-            station.departures = departures.get(id) ?? 0;
-            station.totalTraffic = station.arrivals + station.departures;
-            return station;
-        });
-                
-        const radiusScale = d3
-            .scaleSqrt()
-            .domain([0, d3.max(stations, (d) => d.totalTraffic)])
-            .range([0, 25]);
-                
-        circles
-            .data(stations)
-            .attr('r', (d) => radiusScale(d.totalTraffic));
-
-        circles
-            .each(function(d) {
-                d3.select(this)
-                .append('title')
-                .text(`${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
-            });
-
         for (let trip of trips) {
             trip.started_at = new Date(trip.started_at);
             trip.ended_at = new Date(trip.ended_at);
         }
+        filterTripsbyTime();
                 
     }).catch(error => {
         console.error("Error loading the traffic data:", error);
@@ -191,44 +155,48 @@ function filterTripsbyTime() {
               Math.abs(startedMinutes - timeFilter) <= 60 ||
               Math.abs(endedMinutes - timeFilter) <= 60
             );
-          });
-  
-        // we need to update the station data here explained in the next couple paragraphs
-        filteredDepartures = d3.rollup(
-            filteredTrips,
-            (v) => v.length,
-            (d) => d.start_station_id,
-        );
-            
-        filteredArrivals = d3.rollup(
-            filteredTrips,
-            (v) => v.length, // count the number of trips
-            (d) => d.end_station_id // group by end station ID
-        );
-
-                
-        filteredStations = stations.map((station) => {
-            station = { ...station }; // Copy the station object
-            let id = station.short_name;
-            station.arrivals = filteredArrivals.get(id) ?? 0;
-            station.departures = filteredDepartures.get(id) ?? 0;
-            station.totalTraffic = station.arrivals + station.departures;
-            return station;
         });
-        const radiusScale = d3
-            .scaleSqrt()
-            .domain([0, d3.max(filteredStations, (d) => d.totalTraffic)])
-            .range(timeFilter === -1 ? [0, 25] : [3, 25]);
-                
-        circles
-            .data(filteredStations)
-            .attr('r', (d) => radiusScale(d.totalTraffic));
 
-        circles
-            .each(function(d) {
-                d3.select(this)
-                .append('title')
-                .text(`${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
-            });
+    // we need to update the station data here explained in the next couple paragraphs
+    filteredDepartures = d3.rollup(
+        filteredTrips,
+        (v) => v.length,
+        (d) => d.start_station_id,
+    );
+            
+    filteredArrivals = d3.rollup(
+        filteredTrips,
+        (v) => v.length, // count the number of trips
+        (d) => d.end_station_id // group by end station ID
+    );
+
+                
+    filteredStations = stations.map((station) => {
+        station = { ...station }; // Copy the station object
+        let id = station.short_name;
+        station.arrivals = filteredArrivals.get(id) ?? 0;
+        station.departures = filteredDepartures.get(id) ?? 0;
+        station.totalTraffic = station.arrivals + station.departures;
+        return station;
+    });
+    const radiusScale = d3
+        .scaleSqrt()
+        .domain([0, d3.max(filteredStations, (d) => d.totalTraffic)])
+        .range(timeFilter === -1 ? [0, 25] : [3, 25]);
+            
+    circles
+        .data(filteredStations)
+        .attr('r', (d) => radiusScale(d.totalTraffic))
+        .style("--departure-ratio", d => stationFlow(d.departures / d.totalTraffic));
+
+    circles
+        .each(function(d) {
+            d3.select(this)
+            .append('title')
+            .text(`${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`)
+        });
+
+
 
 }
+
