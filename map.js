@@ -51,7 +51,9 @@ map.on('load', () => {
     });
     
     // Load the nested JSON file
-    const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json'
+    const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
+    const tripsurl = "https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv";
+    
     d3.json(jsonurl).then(jsonData => {
         stations = jsonData.data.stations;
         
@@ -69,22 +71,55 @@ map.on('load', () => {
         
         // Initial position update when map loads
         updatePositions();
-    }).catch(error => {
-        console.error('Error loading JSON:', error);  // Handle errors if JSON loading fails
-    });
-
-    d3.csv("https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv").then(data => {
-        trips = data;
-        
-        for (let trip of trips) {
-            trip.started_at = new Date(trip.started_at);
-            trip.ended_at = new Date(trip.ended_at);
-        }
-        filterTripsbyTime();
-                
-    }).catch(error => {
+    }).then(
+        d3.csv(tripsurl).then(data => {
+            trips = data;
+            
+            for (let trip of trips) {
+                trip.started_at = new Date(trip.started_at);
+                trip.ended_at = new Date(trip.ended_at);
+            }
+            filterTripsbyTime();
+    })).catch(error => {
         console.error("Error loading the traffic data:", error);
     });            
+
+                
+
+
+    // d3.json(jsonurl).then(jsonData => {
+    //     stations = jsonData.data.stations;
+        
+    //     // Append circles to the SVG for each station
+    //     circles = svg.selectAll('circle')
+    //     .data(stations)
+    //     .enter()
+    //     .append('circle')
+    //     .attr('r', 5)               // Radius of the circle
+    //     .attr('fill', 'steelblue')  // Circle fill color
+    //     .attr('stroke', 'white')    // Circle border color
+    //     .attr('stroke-width', 1)    // Circle border thickness
+    //     .attr('opacity', 0.8)      // Circle opacity
+    //     ;
+        
+    //     // Initial position update when map loads
+    //     updatePositions();
+    // }).catch(error => {
+    //     console.error('Error loading JSON:', error);  // Handle errors if JSON loading fails
+    // });
+
+    // d3.csv(tripsurl).then(data => {
+    //     trips = data;
+        
+    //     for (let trip of trips) {
+    //         trip.started_at = new Date(trip.started_at);
+    //         trip.ended_at = new Date(trip.ended_at);
+    //     }
+    //     filterTripsbyTime();
+                
+    //     }).catch(error => {
+    //         console.error("Error loading the traffic data:", error);
+    //     });            
 });
 
 
