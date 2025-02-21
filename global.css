@@ -34,7 +34,7 @@ html, body {
     pointer-events: none;
 }
 
-#map circle {
+#map circle, .legend-item {
     --color-departures: steelblue;
     --color-arrivals: darkorange;
     --color: color-mix(
@@ -43,6 +43,39 @@ html, body {
       var(--color-arrivals)
     );
     fill: var(--color);
+}
+
+.legend {
+    display: flex;
+    justify-content: space-between;
+    margin-block: 1em;
+    padding: 10px;
+    border-radius: 5px;
+    gap: 3em;
+}
+
+.legend-title {
+    color:gray;
+    font-size: 110%;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    position: relative; /* Needed for proper positioning of the pseudo-element */
+}
+
+.legend-item::before {
+    content: "";
+    display: block;
+    width: 20px; /* Width of the swatch */
+    height: 20px; /* Height of the swatch */
+    background: var(--color);
+    margin-right: 10px; /* Space between swatch and text */
+    border-radius: 50%; /* Makes the swatch circular */
+}
+
+#map circle {
     fill-opacity: 60%;
     stroke: white;
     pointer-events: auto;
